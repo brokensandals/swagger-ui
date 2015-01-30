@@ -1,5 +1,5 @@
 // swagger-ui.js
-// version 2.0.23
+// version 2.0.24
 $(function() {
 
 	// Helper function for vertically aligning DOM elements
@@ -187,7 +187,190 @@ var Docs = {
 	collapseOperation: function(elem) {
 		elem.slideUp();
 	}
-};(function() {
+};/**
+
+This is derived from the file xhr.js in jQuery-1.8.0, which is licensed as follows:
+
+Copyright 2012 jQuery Foundation and other contributors
+http://jquery.com/
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+var xhrId = 0;
+
+// Create transport if the browser can provide an xhr
+if ( jQuery.support.ajax ) {
+
+  jQuery.ajaxTransport('+blob', function( s ) {
+    // Cross domain only allowed if supported through XMLHttpRequest
+    if ( !s.crossDomain || jQuery.support.cors ) {
+
+      var callback;
+
+      return {
+        send: function( headers, complete ) {
+
+          // Get a new xhr
+          var handle, i,
+            xhr = s.xhr();
+
+          // Open the socket
+          // Passing null username, generates a login popup on Opera (#2865)
+          if ( s.username ) {
+            xhr.open( s.type, s.url, s.async, s.username, s.password );
+          } else {
+            xhr.open( s.type, s.url, s.async );
+          }
+
+          // Apply custom fields if provided
+          if ( s.xhrFields ) {
+            for ( i in s.xhrFields ) {
+              xhr[ i ] = s.xhrFields[ i ];
+            }
+          }
+
+          // Override mime type if needed
+          if ( s.mimeType && xhr.overrideMimeType ) {
+            xhr.overrideMimeType( s.mimeType );
+          }
+
+          // X-Requested-With header
+          // For cross-domain requests, seeing as conditions for a preflight are
+          // akin to a jigsaw puzzle, we simply never set it to be sure.
+          // (it can always be set on a per-request basis or even using ajaxSetup)
+          // For same-domain requests, won't change header if already provided.
+          if ( !s.crossDomain && !headers["X-Requested-With"] ) {
+            headers[ "X-Requested-With" ] = "XMLHttpRequest";
+          }
+
+          // Need an extra try/catch for cross domain requests in Firefox 3
+          try {
+            for ( i in headers ) {
+              xhr.setRequestHeader( i, headers[ i ] );
+            }
+          } catch( _ ) {}
+
+          xhr.responseType = 'blob';
+
+          // Do send the request
+          // This may raise an exception which is actually
+          // handled in jQuery.ajax (so no try/catch here)
+          xhr.send( ( s.hasContent && s.data ) || null );
+
+          // Listener
+          callback = function( _, isAbort ) {
+
+            var status,
+              statusText,
+              responseHeaders,
+              responses,
+              xml;
+
+            // Firefox throws exceptions when accessing properties
+            // of an xhr when a network error occurred
+            // http://helpful.knobs-dials.com/index.php/Component_returned_failure_code:_0x80040111_(NS_ERROR_NOT_AVAILABLE)
+            try {
+
+              // Was never called and is aborted or complete
+              if ( callback && ( isAbort || xhr.readyState === 4 ) ) {
+
+                // Only called once
+                callback = undefined;
+
+                // Do not keep as active anymore
+                if ( handle ) {
+                  xhr.onreadystatechange = jQuery.noop;
+                }
+
+                // If it's an abort
+                if ( isAbort ) {
+                  // Abort it manually if needed
+                  if ( xhr.readyState !== 4 ) {
+                    xhr.abort();
+                  }
+                } else {
+                  status = xhr.status;
+                  responseHeaders = xhr.getAllResponseHeaders();
+                  responses = {};
+                  
+                  responses.blob = xhr.response;
+
+                  // Firefox throws an exception when accessing
+                  // statusText for faulty cross-domain requests
+                  try {
+                    statusText = xhr.statusText;
+                  } catch( e ) {
+                    // We normalize with Webkit giving an empty statusText
+                    statusText = "";
+                  }
+
+                  // Filter status for non standard behaviors
+
+                  // If the request is local and we have data: assume a success
+                  // (success with no data won't get notified, that's the best we
+                  // can do given current implementations)
+                  if ( !status && s.isLocal && !s.crossDomain ) {
+                    status = (responses.blob || responses.text) ? 200 : 404;
+                  // IE - #1450: sometimes returns 1223 when it should be 204
+                  } else if ( status === 1223 ) {
+                    status = 204;
+                  }
+                }
+              }
+            } catch( firefoxAccessException ) {
+              if ( !isAbort ) {
+                complete( -1, firefoxAccessException );
+              }
+            }
+
+            // Call complete if needed
+            if ( responses ) {
+              complete( status, statusText, responses, responseHeaders );
+            }
+          };
+
+          if ( !s.async ) {
+            // if we're in sync mode we fire the callback
+            callback();
+          } else if ( xhr.readyState === 4 ) {
+            // (IE6 & IE7) if it's in cache and has been
+            // retrieved directly we need to fire the callback
+            setTimeout( callback, 0 );
+          } else {
+            handle = ++xhrId;
+            xhr.onreadystatechange = callback;
+          }
+        },
+
+        abort: function() {
+          if ( callback ) {
+            callback(0,1);
+          }
+        }
+      };
+    }
+  });
+}
+(function() {
   var template = Handlebars.template, templates = Handlebars.templates = Handlebars.templates || {};
 templates['content_type'] = template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [4,'>= 1.0.0'];
@@ -396,7 +579,7 @@ function program18(depth0,data) {
 function program20(depth0,data) {
   
   
-  return "\n          <div class='sandbox_header'>\n            <input class='submit' name='commit' type='button' value='Try it out!' />\n            <a href='#' class='response_hider' style='display:none'>Hide Response</a>\n            <span class='response_throbber' style='display:none'></span>\n          </div>\n          ";
+  return "\n          <div class='sandbox_header'>\n            <input class='submit' name='commit' type='button' value='Try it out!' />\n            <input class='submit submit_save' name='commit_download' type='button' value='Try & save response' />\n            <a href='#' class='response_hider' style='display:none'>Hide Response</a>\n            <span class='response_throbber' style='display:none'></span>\n          </div>\n          ";
   }
 
   buffer += "\n  <ul class='operations' >\n    <li class='";
@@ -1714,7 +1897,7 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
     };
 
     OperationView.prototype.submitOperation = function(e) {
-      var error_free, form, isFileUpload, map, o, opts, val, _i, _j, _k, _len, _len1, _len2, _ref5, _ref6, _ref7;
+      var error_free, form, isFileDownload, isFileUpload, map, o, opts, val, _i, _j, _k, _len, _len1, _len2, _ref5, _ref6, _ref7;
       if (e != null) {
         e.preventDefault();
       }
@@ -1739,6 +1922,7 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
           parent: this
         };
         isFileUpload = false;
+        isFileDownload = $(e.target).hasClass('submit_save');
         _ref5 = form.find("input");
         for (_i = 0, _len = _ref5.length; _i < _len; _i++) {
           o = _ref5[_i];
@@ -1767,8 +1951,8 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
         opts.responseContentType = $("div select[name=responseContentType]", $(this.el)).val();
         opts.requestContentType = $("div select[name=parameterContentType]", $(this.el)).val();
         $(".response_throbber", $(this.el)).show();
-        if (isFileUpload) {
-          return this.handleFileUpload(map, form);
+        if (isFileUpload || isFileDownload) {
+          return this.handleFileTransfer(isFileDownload, map, form, opts);
         } else {
           return this.model["do"](map, opts, this.showCompleteStatus, this.showErrorStatus, this);
         }
@@ -1779,7 +1963,7 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
       return parent.showCompleteStatus(response);
     };
 
-    OperationView.prototype.handleFileUpload = function(map, form) {
+    OperationView.prototype.handleFileTransfer = function(isFileDownload, map, form, opts) {
       var bodyParam, el, headerParams, o, obj, param, params, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref5, _ref6, _ref7, _ref8,
         _this = this;
       _ref5 = form.serializeArray();
@@ -1821,11 +2005,18 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
       $(".request_url", $(this.el)).html("<pre></pre>");
       $(".request_url pre", $(this.el)).text(this.invocationUrl);
       obj = {
+        accepts: {
+          blob: opts.responseContentType,
+          json: opts.responseContentType
+        },
+        responseFields: {
+          blob: 'responseBlob'
+        },
         type: this.model.method,
         url: this.invocationUrl,
         headers: headerParams,
         data: bodyParam,
-        dataType: 'json',
+        dataType: isFileDownload ? 'blob' : 'json',
         contentType: false,
         processData: false,
         error: function(data, textStatus, error) {
@@ -1861,6 +2052,7 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
       }
       o = {};
       o.content = {};
+      o.content.blob = data.responseBlob;
       o.content.data = data.responseText;
       o.headers = headers;
       o.request = {};
@@ -1986,7 +2178,7 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
     };
 
     OperationView.prototype.showStatus = function(response) {
-      var code, content, contentType, headers, opts, pre, response_body, response_body_el, url;
+      var blobURL, code, content, contentType, headers, opts, pre, response_body, response_body_el, url;
       if (response.content === void 0) {
         content = response.data;
         url = response.url;
@@ -2026,9 +2218,13 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
       response_body_el = $('.response_body', $(this.el))[0];
       opts = this.options.swaggerOptions;
       if (opts.highlightSizeThreshold && response.data.length > opts.highlightSizeThreshold) {
-        return response_body_el;
+        response_body_el;
       } else {
-        return hljs.highlightBlock(response_body_el);
+        hljs.highlightBlock(response_body_el);
+      }
+      if (response.content.blob) {
+        blobURL = window.URL.createObjectURL(response.content.blob);
+        return window.open(blobURL, '_blank');
       }
     };
 

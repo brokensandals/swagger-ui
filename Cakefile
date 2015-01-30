@@ -70,7 +70,7 @@ task 'dist', 'Build a distribution', ->
           obj = JSON.parse(fileContents)
           exec 'echo "// swagger-ui.js" > dist/swagger-ui.js'
           exec 'echo "// version ' + obj.version + '" >> dist/swagger-ui.js'
-          exec 'cat src/main/javascript/doc.js dist/_swagger-ui-templates.js dist/_swagger-ui.js >> dist/swagger-ui.js', (err, stdout, stderr) ->
+          exec 'cat src/main/javascript/doc.js src/main/javascript/transport.js dist/_swagger-ui-templates.js dist/_swagger-ui.js >> dist/swagger-ui.js', (err, stdout, stderr) ->
             throw err if err
             fs.unlink 'dist/_swagger-ui.js'
             fs.unlink 'dist/_swagger-ui-templates.js'

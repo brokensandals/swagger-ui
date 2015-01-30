@@ -122,6 +122,7 @@ class OperationView extends Backbone.View
       opts = {parent: @}
 
       isFileUpload = false
+      isFileDownload = $(e.target).hasClass('submit_save')
 
       for o in form.find("input")
         if(o.value? && jQuery.trim(o.value).length > 0)
@@ -142,15 +143,15 @@ class OperationView extends Backbone.View
       opts.requestContentType = $("div select[name=parameterContentType]", $(@el)).val()
 
       $(".response_throbber", $(@el)).show()
-      if isFileUpload
-        @handleFileUpload map, form
+      if isFileUpload || isFileDownload
+        @handleFileTransfer isFileDownload, map, form, opts
       else
         @model.do(map, opts, @showCompleteStatus, @showErrorStatus, @)
 
   success: (response, parent) ->
     parent.showCompleteStatus response
 
-  handleFileUpload: (map, form) ->
+  handleFileTransfer: (isFileDownload, map, form, opts) ->
     for o in form.serializeArray()
       if(o.value? && jQuery.trim(o.value).length > 0)
         map[o.name] = o.value
@@ -190,11 +191,16 @@ class OperationView extends Backbone.View
     $(".request_url pre", $(@el)).text(@invocationUrl);
     
     obj = 
+      accepts:
+        blob: opts.responseContentType
+        json: opts.responseContentType
+      responseFields:
+        blob: 'responseBlob'
       type: @model.method
       url: @invocationUrl
       headers: headerParams
       data: bodyParam
-      dataType: 'json'
+      dataType: if isFileDownload then 'blob' else 'json'
       contentType: false
       processData: false
       error: (data, textStatus, error) =>
@@ -227,6 +233,7 @@ class OperationView extends Backbone.View
 
     o = {}
     o.content = {}
+    o.content.blob = data.responseBlob
     o.content.data = data.responseText
     o.headers = headers
     o.request = {}
@@ -369,6 +376,12 @@ class OperationView extends Backbone.View
     # only highlight the response if response is less than threshold, default state is highlight response
     opts = @options.swaggerOptions
     if opts.highlightSizeThreshold && response.data.length > opts.highlightSizeThreshold then response_body_el else hljs.highlightBlock(response_body_el)
+
+    if response.content.blob
+      blobURL = window.URL.createObjectURL(response.content.blob)
+      # this is a bad way to trigger the download because pop-up blockers will stop it,
+      # would be better to just put the url into a link on the page
+      window.open(blobURL, '_blank')
 
   toggleOperationContent: ->
     elem = $('#' + Docs.escapeResourceName(@model.parentId) + "_" + @model.nickname + "_content")
